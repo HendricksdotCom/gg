@@ -1,8 +1,9 @@
 import { motion } from 'motion/react';
-import { Home, Gamepad2, Swords, Trophy, Settings, LogOut } from 'lucide-react';
+import { Home, Gamepad2, Swords, Trophy, Settings, LogOut, Users } from 'lucide-react';
 
 const navItems = [
   { id: 'dashboard', icon: Home, label: 'Home' },
+  { id: 'social', icon: Users, label: 'Social Feed' },
   { id: 'platforms', icon: Gamepad2, label: 'Platforms' },
   { id: 'challenges', icon: Swords, label: 'AI Challenges' },
   { id: 'achievements', icon: Trophy, label: 'Achievements' },

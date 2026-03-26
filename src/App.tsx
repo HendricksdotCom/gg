@@ -9,6 +9,7 @@ import { Dashboard } from './components/Dashboard';
 import { FriendsPanel } from './components/FriendsPanel';
 import { Platforms } from './components/Platforms';
 import { Challenges } from './components/Challenges';
+import { Social } from './components/Social';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -23,6 +24,7 @@ export default function App() {
         
         <div className="p-8 max-w-7xl mx-auto relative z-10">
           {activeTab === 'dashboard' && <Dashboard />}
+          {activeTab === 'social' && <Social />}
           {activeTab === 'platforms' && <Platforms />}
           {activeTab === 'challenges' && <Challenges />}
           {activeTab === 'achievements' && (
