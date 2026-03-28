@@ -1,54 +1,81 @@
+import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { Heart, MessageSquare, Share2, Users, Twitter, MessageCircle, Trophy, Swords, Gamepad2 } from 'lucide-react';
+import { Heart, MessageSquare, Share2, Users, Twitter, MessageCircle, Trophy, Swords, Gamepad2, Image as ImageIcon, Smile, FileVideo } from 'lucide-react';
 
-const feedItems = [
-  {
-    id: 1,
-    user: { name: 'Alex_Pro', avatar: 'https://i.pravatar.cc/150?u=1' },
-    action: 'unlocked an achievement',
-    target: 'First Blood in Apex Legends',
-    time: '2 hours ago',
-    likes: 12,
-    comments: 3,
-    type: 'achievement',
-    icon: Trophy,
-    color: 'text-[#FFD700]',
-    bgColor: 'bg-[#FFD700]/20'
-  },
-  {
-    id: 2,
-    user: { name: 'SarahSniper', avatar: 'https://i.pravatar.cc/150?u=2' },
-    action: 'completed an AI Challenge',
-    target: 'Mirror Match (Hard)',
-    time: '5 hours ago',
-    likes: 24,
-    comments: 5,
-    type: 'challenge',
-    icon: Swords,
-    color: 'text-[#8A2BE2]',
-    bgColor: 'bg-[#8A2BE2]/20'
-  },
-  {
-    id: 3,
-    user: { name: 'Ghost_Rider', avatar: 'https://i.pravatar.cc/150?u=3' },
-    action: 'started playing',
-    target: 'Cyberpunk 2077',
-    time: '8 hours ago',
-    likes: 8,
-    comments: 1,
-    type: 'game',
-    icon: Gamepad2,
-    color: 'text-green-400',
-    bgColor: 'bg-green-400/20'
-  }
-];
-
-const activeParties = [
-  { id: 1, game: 'Helldivers 2', members: 3, max: 4, leader: 'Alex_Pro' },
-  { id: 2, game: 'Valorant', members: 4, max: 5, leader: 'SarahSniper' },
-];
+const iconMap: any = {
+  Trophy,
+  Swords,
+  Gamepad2,
+  MessageSquare
+};
 
 export function Social() {
+  const [feedItems, setFeedItems] = useState<any[]>([]);
+  const [activeParties, setActiveParties] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [postContent, setPostContent] = useState('');
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    try {
+      const [feedRes, partiesRes] = await Promise.all([
+        fetch('/api/social/feed'),
+        fetch('/api/social/parties')
+      ]);
+      const feedData = await feedRes.json();
+      const partiesData = await partiesRes.json();
+      setFeedItems(feedData);
+      setActiveParties(partiesData);
+    } catch (error) {
+      console.error('Error fetching social data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const joinParty = async (partyId: number) => {
+    try {
+      await fetch('/api/social/parties/join', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ partyId })
+      });
+      alert('Joined party successfully!');
+    } catch (error) {
+      console.error('Error joining party:', error);
+    }
+  };
+
+  const handleCreatePost = async () => {
+    if (!postContent.trim()) return;
+
+    try {
+      const res = await fetch('/api/social/posts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: postContent })
+      });
+      
+      if (res.ok) {
+        setPostContent('');
+        fetchData(); // Refresh feed
+      }
+    } catch (error) {
+      console.error('Error creating post:', error);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-[#8A2BE2]"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-8">
       <header>
@@ -60,22 +87,42 @@ export function Social() {
         {/* Activity Feed */}
         <div className="lg:col-span-2 space-y-6">
           {/* Create Post */}
-          <div className="bg-white/5 border border-white/10 rounded-3xl p-4 backdrop-blur-md flex gap-4 items-center">
-            <img src="https://i.pravatar.cc/150?u=me" alt="Me" className="w-10 h-10 rounded-full border border-[#8A2BE2]" />
-            <input 
-              type="text" 
-              placeholder="Share your latest gaming moment..." 
-              className="bg-transparent border-none outline-none flex-1 text-sm text-white placeholder:text-white/30"
-            />
-            <button className="bg-[#8A2BE2] hover:bg-[#8A2BE2]/80 text-white px-6 py-2.5 rounded-xl text-sm font-bold transition-colors shadow-[0_0_15px_rgba(138,43,226,0.3)]">
-              Post
-            </button>
+          <div className="bg-white/5 border border-white/10 rounded-3xl p-5 backdrop-blur-md">
+            <div className="flex gap-4 items-start mb-4">
+              <img src="https://i.pravatar.cc/150?u=me" alt="Me" className="w-12 h-12 rounded-full border border-[#8A2BE2]" />
+              <textarea 
+                value={postContent}
+                onChange={(e) => setPostContent(e.target.value)}
+                placeholder="Share your thoughts, memes, or gaming moments..." 
+                className="bg-transparent border-none outline-none flex-1 text-sm text-white placeholder:text-white/30 resize-none min-h-[80px] pt-2"
+              />
+            </div>
+            <div className="flex items-center justify-between pt-3 border-t border-white/10">
+              <div className="flex gap-2">
+                <button className="p-2 text-[#8A2BE2] hover:bg-[#8A2BE2]/20 rounded-full transition-colors" title="Add Image">
+                  <ImageIcon className="w-5 h-5" />
+                </button>
+                <button className="p-2 text-[#FFD700] hover:bg-[#FFD700]/20 rounded-full transition-colors" title="Add GIF">
+                  <FileVideo className="w-5 h-5" />
+                </button>
+                <button className="p-2 text-pink-500 hover:bg-pink-500/20 rounded-full transition-colors" title="Add Emoji">
+                  <Smile className="w-5 h-5" />
+                </button>
+              </div>
+              <button 
+                onClick={handleCreatePost}
+                disabled={!postContent.trim()}
+                className="bg-[#8A2BE2] hover:bg-[#8A2BE2]/80 disabled:opacity-50 disabled:cursor-not-allowed text-white px-6 py-2 rounded-xl text-sm font-bold transition-colors shadow-[0_0_15px_rgba(138,43,226,0.3)]"
+              >
+                Post
+              </button>
+            </div>
           </div>
 
           {/* Feed Items */}
           <div className="space-y-4">
             {feedItems.map((item, i) => {
-              const Icon = item.icon;
+              const Icon = iconMap[item.icon] || Gamepad2;
               return (
                 <motion.div 
                   key={item.id}
@@ -91,7 +138,6 @@ export function Social() {
                         <p className="text-sm">
                           <span className="font-bold text-white">{item.user.name}</span>{' '}
                           <span className="text-white/60">{item.action}</span>{' '}
-                          <span className="font-semibold text-[#FFD700]">{item.target}</span>
                         </p>
                         <p className="text-xs text-white/40 mt-0.5">{item.time}</p>
                       </div>
@@ -99,6 +145,15 @@ export function Social() {
                     <div className={`w-10 h-10 rounded-xl ${item.bgColor} flex items-center justify-center`}>
                       <Icon className={`w-5 h-5 ${item.color}`} />
                     </div>
+                  </div>
+
+                  {/* Post Content / Target */}
+                  <div className="mt-2 text-sm text-white/90">
+                    {item.type === 'post' ? (
+                      <p className="whitespace-pre-wrap">{item.target}</p>
+                    ) : (
+                      <span className="font-semibold text-[#FFD700]">{item.target}</span>
+                    )}
                   </div>
 
                   <div className="flex items-center gap-6 mt-6 pt-4 border-t border-white/5">
@@ -135,7 +190,10 @@ export function Social() {
                     </span>
                   </div>
                   <p className="text-xs text-white/50 mb-3">Leader: {party.leader}</p>
-                  <button className="w-full bg-white/10 hover:bg-white/20 text-white text-xs font-bold py-2 rounded-xl transition-colors">
+                  <button 
+                    onClick={() => joinParty(party.id)}
+                    className="w-full bg-white/10 hover:bg-white/20 text-white text-xs font-bold py-2 rounded-xl transition-colors"
+                  >
                     Join Party
                   </button>
                 </div>

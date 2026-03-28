@@ -1,16 +1,45 @@
+import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { Play, Clock, Activity, Zap, Swords, Trophy } from 'lucide-react';
-
-const recentGames = [
-  { id: 1, title: 'Cyberpunk 2077', platform: 'Steam', playtime: '124h', image: 'https://images.unsplash.com/photo-1605901309584-818e25960b8f?auto=format&fit=crop&q=80&w=400&h=400', type: 'Single' },
-  { id: 2, title: 'Helldivers 2', platform: 'PS5', playtime: '45h', image: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&q=80&w=400&h=400', type: 'Co-op' },
-  { id: 3, title: 'Valorant', platform: 'Epic', playtime: '312h', image: 'https://images.unsplash.com/photo-1538481199705-c710c4e965fc?auto=format&fit=crop&q=80&w=400&h=400', type: 'Multi' },
-  { id: 4, title: 'Baldur\'s Gate 3', platform: 'GOG', playtime: '89h', image: 'https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&q=80&w=400&h=400', type: 'Co-op' },
-  { id: 5, title: 'Elden Ring', platform: 'Steam', playtime: '210h', image: 'https://images.unsplash.com/photo-1605901302633-8b1b115998a1?auto=format&fit=crop&q=80&w=400&h=400', type: 'Single' },
-  { id: 6, title: 'Apex Legends', platform: 'EA', playtime: '540h', image: 'https://images.unsplash.com/photo-1552820728-8b83bb6b773f?auto=format&fit=crop&q=80&w=400&h=400', type: 'Multi' },
-];
+import { Play, Clock, Activity, Zap, Swords, Trophy, MoreVertical, UserPlus, LogIn } from 'lucide-react';
 
 export function Dashboard() {
+  const [recentGames, setRecentGames] = useState<any[]>([]);
+  const [stats, setStats] = useState<any>(null);
+  const [friendsPlaying, setFriendsPlaying] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [activeMenu, setActiveMenu] = useState<number | null>(null);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [gamesRes, statsRes, friendsRes] = await Promise.all([
+          fetch('/api/games/library'),
+          fetch('/api/games/stats'),
+          fetch('/api/social/friends/playing')
+        ]);
+        const gamesData = await gamesRes.json();
+        const statsData = await statsRes.json();
+        const friendsData = await friendsRes.json();
+        setRecentGames(gamesData);
+        setStats(statsData);
+        setFriendsPlaying(friendsData);
+      } catch (error) {
+        console.error('Error fetching dashboard data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-[#8A2BE2]"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-10">
       <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
@@ -25,7 +54,7 @@ export function Dashboard() {
             </div>
             <div>
               <p className="text-[10px] text-white/50 uppercase font-semibold tracking-wider">Weekly Playtime</p>
-              <p className="text-lg font-bold">24.5 hrs</p>
+              <p className="text-lg font-bold">{stats?.weeklyPlaytime || '0 hrs'}</p>
             </div>
           </div>
           <div className="bg-white/5 border border-white/10 rounded-2xl p-4 flex items-center gap-4 backdrop-blur-md flex-1 md:flex-none">
@@ -34,11 +63,66 @@ export function Dashboard() {
             </div>
             <div>
               <p className="text-[10px] text-white/50 uppercase font-semibold tracking-wider">AI Skill Rating</p>
-              <p className="text-lg font-bold">Diamond II</p>
+              <p className="text-lg font-bold">{stats?.skillRating || 'Unranked'}</p>
             </div>
           </div>
         </div>
       </header>
+
+      <section>
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-2xl font-semibold">Friends Currently Playing</h2>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {friendsPlaying.map((friend, i) => (
+            <motion.div
+              key={friend.id}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.1 }}
+              className="bg-white/5 border border-white/10 rounded-3xl p-4 backdrop-blur-md flex items-center gap-4 relative"
+            >
+              <div className="relative">
+                <img src={friend.avatar} alt={friend.name} className="w-12 h-12 rounded-full border border-white/10" />
+                <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-[#121212] rounded-full"></span>
+              </div>
+              
+              <div className="flex-1 min-w-0">
+                <h3 className="font-bold text-sm truncate">{friend.name}</h3>
+                <p className="text-xs text-[#FFD700] truncate">{friend.game}</p>
+                <p className="text-[10px] text-white/50 truncate">{friend.status} • {friend.platform}</p>
+              </div>
+
+              <div className="relative">
+                <button 
+                  onClick={() => setActiveMenu(activeMenu === friend.id ? null : friend.id)}
+                  className="p-2 hover:bg-white/10 rounded-full transition-colors"
+                >
+                  <MoreVertical className="w-5 h-5 text-white/70" />
+                </button>
+                
+                {activeMenu === friend.id && (
+                  <div className="absolute right-0 mt-2 w-36 bg-[#1a1a2e] border border-white/10 rounded-xl shadow-xl z-10 overflow-hidden">
+                    <button 
+                      onClick={() => { alert(`Invited ${friend.name}`); setActiveMenu(null); }}
+                      className="w-full flex items-center gap-2 px-4 py-2.5 text-sm hover:bg-white/10 transition-colors text-left"
+                    >
+                      <UserPlus className="w-4 h-4" /> Invite
+                    </button>
+                    <button 
+                      onClick={() => { alert(`Joining ${friend.name}`); setActiveMenu(null); }}
+                      className="w-full flex items-center gap-2 px-4 py-2.5 text-sm hover:bg-white/10 transition-colors text-left"
+                    >
+                      <LogIn className="w-4 h-4" /> Join Game
+                    </button>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      </section>
 
       <section>
         <div className="flex justify-between items-center mb-6">

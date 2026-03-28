@@ -1,14 +1,74 @@
+import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { Swords, Users, Timer, Target, Sparkles } from 'lucide-react';
 
-const challenges = [
-  { id: 1, type: '1v1 Duel', title: 'Mirror Match', game: 'Valorant', difficulty: 'Hard', icon: Swords, color: 'from-red-500/20 to-orange-500/20', border: 'border-orange-500/30', text: 'text-orange-400' },
-  { id: 2, type: '2v2 Team', title: 'Tactical Breach', game: 'Rainbow Six', difficulty: 'Medium', icon: Users, color: 'from-blue-500/20 to-cyan-500/20', border: 'border-cyan-500/30', text: 'text-cyan-400' },
-  { id: 3, type: 'Speed Run', title: 'Any% Glitchless', game: 'Elden Ring', difficulty: 'Extreme', icon: Timer, color: 'from-[#8A2BE2]/20 to-purple-500/20', border: 'border-[#8A2BE2]/30', text: 'text-[#8A2BE2]' },
-  { id: 4, type: 'AI Quest', title: 'Perfect Accuracy', game: 'Apex Legends', difficulty: 'Easy', icon: Target, color: 'from-[#FFD700]/20 to-yellow-500/20', border: 'border-[#FFD700]/30', text: 'text-[#FFD700]' },
-];
+const iconMap: any = {
+  Swords,
+  Users,
+  Timer,
+  Target
+};
 
 export function Challenges() {
+  const [challenges, setChallenges] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [generating, setGenerating] = useState(false);
+
+  useEffect(() => {
+    fetchChallenges();
+  }, []);
+
+  const fetchChallenges = async () => {
+    try {
+      const res = await fetch('/api/challenges/active');
+      const data = await res.json();
+      setChallenges(data);
+    } catch (error) {
+      console.error('Error fetching challenges:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const generateNewChallenge = async () => {
+    setGenerating(true);
+    try {
+      const res = await fetch('/api/challenges/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          skill: 'Diamond II',
+          games: ['Valorant', 'Apex Legends', 'Elden Ring']
+        })
+      });
+      const newChallenge = await res.json();
+      
+      // Add some UI fields that the AI might not return
+      const enhancedChallenge = {
+        ...newChallenge,
+        id: Date.now(),
+        icon: 'Sparkles',
+        color: 'from-purple-500/20 to-pink-500/20',
+        border: 'border-pink-500/30',
+        text: 'text-pink-400'
+      };
+      
+      setChallenges([enhancedChallenge, ...challenges]);
+    } catch (error) {
+      console.error('Error generating challenge:', error);
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-[#FFD700]"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-8">
       <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
@@ -18,14 +78,18 @@ export function Challenges() {
           </h1>
           <p className="text-white/50">Adaptive AI opponents generated based on your playstyle.</p>
         </div>
-        <button className="bg-gradient-to-r from-[#8A2BE2] to-[#FFD700] text-black font-bold px-6 py-2.5 rounded-xl shadow-[0_0_20px_rgba(255,215,0,0.3)] hover:scale-105 transition-transform w-full md:w-auto">
-          Generate New
+        <button 
+          onClick={generateNewChallenge}
+          disabled={generating}
+          className="bg-gradient-to-r from-[#8A2BE2] to-[#FFD700] text-black font-bold px-6 py-2.5 rounded-xl shadow-[0_0_20px_rgba(255,215,0,0.3)] hover:scale-105 transition-transform w-full md:w-auto disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {generating ? 'Generating...' : 'Generate New'}
         </button>
       </header>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {challenges.map((challenge, i) => {
-          const Icon = challenge.icon;
+          const Icon = iconMap[challenge.icon] || Sparkles;
           return (
             <motion.div
               key={challenge.id}
